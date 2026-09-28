@@ -8,90 +8,6 @@ Reliable generative publishing requires explicit boundaries between technical ev
 
 The system is designed for autonomous composition with zero per-edition manual CSS/HTML adjustment. Harness validation gates autonomous operation.
 
-## Case Study: Polysemy & Semantic Leakage in Agentic Pipelines
-
-### The vulnerability: semantic cross-bleed
-
-The word **model** refers to two different entities in this publication:
-
-| Domain | Entity | Valid attributes |
-|---|---|---|
-| Technical analysis | Statistical foundation model or execution harness | Schema adherence, memory footprint, latency, reasoning evaluation, runtime limits |
-| Editorial presentation | Fashion persona or visual asset | Wardrobe, pose, composition, lighting, approved asset revision |
-
-An earlier README draft collapsed those meanings into the statement that foundation models **“share the visual language of a fashion magazine.”** That sentence assigned an aesthetic relationship to the technical entities being covered. The publication’s visual treatment had leaked into the description of its subject matter.
-
-The corrected relationship is explicit: **the publication presents technical evaluations through an editorial layout.** The technical entity retains its benchmark attributes; the persona and template carry the visual treatment.
-
-This is the polysemy failure mode: shared vocabulary lets generated language cross a domain boundary that the application needs to preserve.
-
-### Root cause: overlapping vocabulary without explicit entity boundaries
-
-A natural-language prompt can place benchmark data, persona descriptions, and art direction in the same context. Generation can then blend associations across those inputs. The observed sentence demonstrates the resulting semantic confusion; the architectural failure is the absence of an enforced distinction between the entity being analyzed and the medium presenting it.
-
-Prompt wording alone cannot guarantee that distinction. Domain isolation requires explicit entity types, scoped worker inputs, and checks at each handoff.
-
-### Mitigation: type the entities, separate the workers, constrain the predicates
-
-**Explicit entity disambiguation.** `ModelBenchmarkPayload` carries technical identity and evaluation data. `EditorialAssetRef` carries an approved presentation asset. `PublicationCandidate` combines those references through named fields. A generic string called `model` cannot substitute for either entity.
-
-**Boundary isolation.** Benchmark metadata travels through structured JSON and typed AST nodes. The Editorial Composition Engine receives the facts required for its writing task. Asset selection and template styling use separate inputs and permissions. Technical values enter trusted components through typed fields; generated copy has no authority to change metrics, asset approval, or layout code.
-
-**Deterministic gate enforcement.** A finite metric vocabulary excludes aesthetic predicates from benchmark records. Unknown fields, wrong entity tags, and unresolved references block the candidate. An attempt to add `wardrobe`, `visual_style`, or a narrative field to a benchmark payload fails validation.
-
-Free-form prose requires an additional semantic check. A string validator cannot establish every sentence’s meaning. Technical assertions therefore need typed subject and predicate references, evidence checks, and editorial assessment before release.
-
-The following self-contained Pydantic v2 contract pattern demonstrates the entity boundary:
-
-```python
-from typing import Annotated, Literal
-from pydantic import BaseModel, ConfigDict, Field
-
-Identifier = Annotated[str, Field(min_length=1, max_length=128)]
-
-class Contract(BaseModel):
-    model_config = ConfigDict(
-        strict=True, extra="forbid", allow_inf_nan=False
-    )
-
-class ModelBenchmarkPayload(Contract):
-    entity_type: Literal["technical_benchmark"]
-    subject_release_id: Identifier
-    capability_class: Literal[
-        "High-Fidelity Syntax Specialist",
-        "High-Depth Foundation Class",
-        "Compact Edge Inference Class",
-        "Constrained Multimodal Synthesizer",
-        "Stateful Execution Harness",
-    ]
-    metric: Literal[
-        "schema_adherence_rate",
-        "reasoning_task_accuracy",
-        "peak_memory_mib",
-        "latency_ms",
-        "geometry_constraint_pass_rate",
-        "timeout_compliance_rate",
-    ]
-    value: float = Field(ge=0)
-    evidence_id: Identifier
-
-class EditorialAssetRef(Contract):
-    entity_type: Literal["editorial_asset"]
-    asset_revision_id: Identifier
-    role: Literal["hero", "fashion_persona", "product_detail"]
-
-class PublicationCandidate(Contract):
-    schema_version: Literal["entity-boundary-1.0"]
-    run_id: Identifier
-    benchmark: ModelBenchmarkPayload
-    editorial_asset: EditorialAssetRef
-
-# Export the contract for a structured worker handoff.
-print(PublicationCandidate.model_json_schema())
-```
-
-This pattern defines the semantic boundary extension. The repository’s [publication contract](src/contracts/publication_candidate.py) implements the Sheet 01 candidate fields, strict validation, bounded lists, internal reference resolution, and revision hashing. Integration of the entity boundary belongs at the candidate and AST interfaces.
-
 ## The Engineering Harness
 
 ```mermaid
@@ -231,3 +147,87 @@ With Python 3.11+ and the [pinned dependency](requirements.txt) installed:
 ```sh
 python -m unittest discover -s tests -v
 ```
+
+## Case Study: Polysemy & Semantic Leakage in Agentic Pipelines
+
+### The vulnerability: semantic cross-bleed
+
+The word **model** refers to two different entities in this publication:
+
+| Domain | Entity | Valid attributes |
+|---|---|---|
+| Technical analysis | Statistical foundation model or execution harness | Schema adherence, memory footprint, latency, reasoning evaluation, runtime limits |
+| Editorial presentation | Fashion persona or visual asset | Wardrobe, pose, composition, lighting, approved asset revision |
+
+An earlier README draft collapsed those meanings into the statement that foundation models **“share the visual language of a fashion magazine.”** That sentence assigned an aesthetic relationship to the technical entities being covered. The publication’s visual treatment had leaked into the description of its subject matter.
+
+The corrected relationship is explicit: **the publication presents technical evaluations through an editorial layout.** The technical entity retains its benchmark attributes; the persona and template carry the visual treatment.
+
+This is the polysemy failure mode: shared vocabulary lets generated language cross a domain boundary that the application needs to preserve.
+
+### Root cause: overlapping vocabulary without explicit entity boundaries
+
+A natural-language prompt can place benchmark data, persona descriptions, and art direction in the same context. Generation can then blend associations across those inputs. The observed sentence demonstrates the resulting semantic confusion; the architectural failure is the absence of an enforced distinction between the entity being analyzed and the medium presenting it.
+
+Prompt wording alone cannot guarantee that distinction. Domain isolation requires explicit entity types, scoped worker inputs, and checks at each handoff.
+
+### Mitigation: type the entities, separate the workers, constrain the predicates
+
+**Explicit entity disambiguation.** `ModelBenchmarkPayload` carries technical identity and evaluation data. `EditorialAssetRef` carries an approved presentation asset. `PublicationCandidate` combines those references through named fields. A generic string called `model` cannot substitute for either entity.
+
+**Boundary isolation.** Benchmark metadata travels through structured JSON and typed AST nodes. The Editorial Composition Engine receives the facts required for its writing task. Asset selection and template styling use separate inputs and permissions. Technical values enter trusted components through typed fields; generated copy has no authority to change metrics, asset approval, or layout code.
+
+**Deterministic gate enforcement.** A finite metric vocabulary excludes aesthetic predicates from benchmark records. Unknown fields, wrong entity tags, and unresolved references block the candidate. An attempt to add `wardrobe`, `visual_style`, or a narrative field to a benchmark payload fails validation.
+
+Free-form prose requires an additional semantic check. A string validator cannot establish every sentence’s meaning. Technical assertions therefore need typed subject and predicate references, evidence checks, and editorial assessment before release.
+
+The following self-contained Pydantic v2 contract pattern demonstrates the entity boundary:
+
+```python
+from typing import Annotated, Literal
+from pydantic import BaseModel, ConfigDict, Field
+
+Identifier = Annotated[str, Field(min_length=1, max_length=128)]
+
+class Contract(BaseModel):
+    model_config = ConfigDict(
+        strict=True, extra="forbid", allow_inf_nan=False
+    )
+
+class ModelBenchmarkPayload(Contract):
+    entity_type: Literal["technical_benchmark"]
+    subject_release_id: Identifier
+    capability_class: Literal[
+        "High-Fidelity Syntax Specialist",
+        "High-Depth Foundation Class",
+        "Compact Edge Inference Class",
+        "Constrained Multimodal Synthesizer",
+        "Stateful Execution Harness",
+    ]
+    metric: Literal[
+        "schema_adherence_rate",
+        "reasoning_task_accuracy",
+        "peak_memory_mib",
+        "latency_ms",
+        "geometry_constraint_pass_rate",
+        "timeout_compliance_rate",
+    ]
+    value: float = Field(ge=0)
+    evidence_id: Identifier
+
+class EditorialAssetRef(Contract):
+    entity_type: Literal["editorial_asset"]
+    asset_revision_id: Identifier
+    role: Literal["hero", "fashion_persona", "product_detail"]
+
+class PublicationCandidate(Contract):
+    schema_version: Literal["entity-boundary-1.0"]
+    run_id: Identifier
+    benchmark: ModelBenchmarkPayload
+    editorial_asset: EditorialAssetRef
+
+# Export the contract for a structured worker handoff.
+print(PublicationCandidate.model_json_schema())
+```
+
+This pattern defines the semantic boundary extension. The repository’s [publication contract](src/contracts/publication_candidate.py) implements the Sheet 01 candidate fields, strict validation, bounded lists, internal reference resolution, and revision hashing. Integration of the entity boundary belongs at the candidate and AST interfaces.
