@@ -57,6 +57,8 @@ A candidate’s confidence score carries no publication authority. Schema confor
 
 ![Runtime Sequence: bounded coordination, source retrieval, composition, validation, and persisted outcomes](assets/eng_02_runtime_sequence.png)
 
+SLOs for Runtime
+
 | Control | Runtime envelope |
 |---|---|
 | Shared run deadline | 180 seconds across stages and retries |
